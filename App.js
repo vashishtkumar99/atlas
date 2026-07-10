@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native';
@@ -12,8 +12,10 @@ import Icon from './src/components/Icons';
 import HomeScreen from './src/screens/HomeScreen';
 import PassportScreen from './src/screens/PassportScreen';
 import TransportScreen from './src/screens/TransportScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import { SearchModal, AddTripSheet, DetailSheet } from './src/components/modals';
 import { INITIAL_TRIPS, MEMORIES } from './src/data/demo';
+import { loadProfile, saveProfile, loadTrips, saveTrips } from './src/storage';
 
 const TABS = [
   { key: 'home', label: 'Home', icon: 'home' },
@@ -28,6 +30,8 @@ export default function App() {
     Fraunces_400Regular_Italic, Fraunces_500Medium_Italic,
   });
 
+  const [booted, setBooted] = useState(false);
+  const [profile, setProfile] = useState(null);
   const [dark, setDark] = useState(false);
   const [tab, setTab] = useState('home');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -38,11 +42,32 @@ export default function App() {
 
   const t = dark ? palettes.dark : palettes.light;
 
+  // load saved profile + trips once on launch
+  useEffect(() => {
+    (async () => {
+      const [p, savedTrips] = await Promise.all([loadProfile(), loadTrips()]);
+      if (p) setProfile(p);
+      if (savedTrips && savedTrips.length) setTrips(savedTrips);
+      setBooted(true);
+    })();
+  }, []);
+
+  // save trips whenever they change (after boot, so we don't overwrite with defaults)
+  useEffect(() => {
+    if (booted) saveTrips(trips);
+  }, [trips, booted]);
+
   const haptic = () => Haptics.selectionAsync().catch(() => {});
 
   const switchTab = (key) => {
     if (key !== tab) { setTab(key); haptic(); }
   };
+
+  const finishOnboarding = useCallback((p) => {
+    setProfile(p);
+    saveProfile(p);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, []);
 
   const saveTrip = useCallback((trip) => {
     setTrips((prev) => [trip, ...prev]);
@@ -58,8 +83,18 @@ export default function App() {
     haptic();
   }, []);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !booted) {
     return <View style={{ flex: 1, backgroundColor: palettes.light.bg }} />;
+  }
+
+  // first launch: sign up
+  if (!profile) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <OnboardingScreen t={t} onDone={finishOnboarding} />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -69,6 +104,7 @@ export default function App() {
         {tab === 'home' && (
           <HomeScreen
             t={t} dark={dark}
+            profile={profile}
             onToggleTheme={() => { setDark(!dark); haptic(); }}
             onSearch={() => setSearchOpen(true)}
             onAddTrip={() => setAddOpen(true)}
@@ -83,7 +119,6 @@ export default function App() {
           <TransportScreen t={t} onAddTrip={() => setAddOpen(true)} onOpenDetail={() => setDetailOpen(true)} />
         )}
 
-        {/* floating tab bar */}
         <View style={[styles.tabbar, { backgroundColor: t.card, shadowColor: '#141C12' }]}>
           {TABS.map(({ key, label, icon }) => {
             const on = tab === key;

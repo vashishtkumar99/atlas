@@ -9,7 +9,7 @@ const SIZE = 272;
 const R = 118;
 const AUTO = 0.05; // gentle auto-spin
 
-export default function Globe({ t }) {
+export default function Globe({ t, extraCities = [] }) {
   const projection = useRef(
     geoOrthographic().translate([SIZE / 2, SIZE / 2]).scale(R).clipAngle(90).rotate([-8, -24])
   ).current;
@@ -121,6 +121,20 @@ export default function Globe({ t }) {
                 onPress={() => setCallout({ ...c, x: p[0], y: p[1] })}
               />
               <Circle cx={p[0]} cy={p[1]} r={4.2} fill="#F2E6BC" stroke="#3E4C39" strokeWidth={1.2} />
+            </G>
+          );
+        })}
+        {extraCities.map((c, i) => {
+          if (!c.ll || geoDistance(c.ll, center) >= Math.PI / 2) return null;
+          const p = projection(c.ll);
+          return (
+            <G key={`x-${i}`}>
+              <Circle cx={p[0]} cy={p[1]} r={haloR} fill={t.gold} opacity={0.22} />
+              <Circle
+                cx={p[0]} cy={p[1]} r={9} fill="transparent"
+                onPress={() => setCallout({ ...c, x: p[0], y: p[1] })}
+              />
+              <Circle cx={p[0]} cy={p[1]} r={4.2} fill={t.gold} stroke="#3E4C39" strokeWidth={1.2} />
             </G>
           );
         })}

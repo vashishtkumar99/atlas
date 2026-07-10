@@ -9,7 +9,14 @@ import { fonts, radius, card } from '../theme';
 
 const MODE_ICON = { plane: 'plane', train: 'train', car: 'car', ferry: 'ferry', walk: 'walk' };
 
-export default function HomeScreen({ t, dark, onToggleTheme, onSearch, onAddTrip, onOpenDetail, trips, memories, onAddMemory }) {
+export default function HomeScreen({ t, dark, onToggleTheme, onSearch, onAddTrip, onOpenDetail, trips, memories, onAddMemory, profile }) {
+  const hour = new Date().getHours();
+  const daypart = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const firstName = profile && profile.name ? profile.name : 'traveler';
+  const globeCities = trips
+    .filter((tr) => tr.ll)
+    .map((tr) => ({ name: tr.city.split(',')[0], ll: tr.ll, sub: `${tr.modeWord ? tr.modeWord.toLowerCase() : 'a trip'}, ${tr.dates}` }));
+
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* header */}
@@ -19,7 +26,7 @@ export default function HomeScreen({ t, dark, onToggleTheme, onSearch, onAddTrip
             <AtlasMark size={22} line={t.sageDeep} thin={t.sage} gold={t.gold} />
             <Text style={[styles.eyebrow, { color: t.sage }]}>Atlas</Text>
           </View>
-          <Text style={[styles.big, { color: t.ink }]}>Good evening, Maya</Text>
+          <Text style={[styles.big, { color: t.ink }]}>{daypart}, {firstName}</Text>
           <Text style={[styles.sub, { color: t.muted }]}>Your world is 12% explored</Text>
         </View>
         <View style={styles.headActions}>
@@ -37,7 +44,7 @@ export default function HomeScreen({ t, dark, onToggleTheme, onSearch, onAddTrip
         <View style={[StyleSheet.absoluteFill, { backgroundColor: t.globeCardB, opacity: 0.45, borderRadius: radius.lg }]} />
         <Text style={[styles.globeEyebrow, { color: t.onGlobeMuted }]}>where you've been</Text>
         <View style={{ alignItems: 'center' }}>
-          <Globe t={t} />
+          <Globe t={t} extraCities={globeCities} />
         </View>
         <Text style={[styles.globeHint, { color: t.onGlobeMuted }]}>drag the Earth to spin it</Text>
         <View style={styles.globeStats}>

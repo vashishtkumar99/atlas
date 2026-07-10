@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Icon from './Icons';
+import CityInput from './CityInput';
 import { Section, Pill, TripHero, MemoryCard, AddMemoryTile } from './bits';
 import { SEARCH_DATA, MODE_WORD } from '../data/demo';
 import { fonts, radius, card } from '../theme';
@@ -75,6 +76,7 @@ const MODES = ['plane', 'train', 'car', 'ferry', 'walk'];
 
 export function AddTripSheet({ t, visible, onClose, onSave }) {
   const [city, setCity] = useState('');
+  const [picked, setPicked] = useState(null); // { city, ll } from suggestions
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [note, setNote] = useState('');
@@ -83,14 +85,15 @@ export function AddTripSheet({ t, visible, onClose, onSave }) {
   const save = () => {
     onSave({
       id: `trip-${Date.now()}`,
-      city: city.trim() || 'Somewhere new',
+      city: picked ? picked.city : (city.trim() || 'Somewhere new'),
+      ll: picked ? picked.ll : null,
       dates: `${from.trim() || 'soon'}${to.trim() ? ` – ${to.trim()}` : ''}`,
       mode,
       modeWord: MODE_WORD[mode],
       pills: note.trim() ? [note.trim()] : [],
       skyline: 'new',
     });
-    setCity(''); setFrom(''); setTo(''); setNote(''); setMode('plane');
+    setCity(''); setPicked(null); setFrom(''); setTo(''); setNote(''); setMode('plane');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   };
 
@@ -104,8 +107,12 @@ export function AddTripSheet({ t, visible, onClose, onSave }) {
           <Text style={[styles.sheetSub, { color: t.muted }]}>just the basics — you can fill in the story later</Text>
 
           <Text style={[styles.label, { color: t.sage }]}>where to?</Text>
-          <TextInput value={city} onChangeText={setCity} placeholder="City, country" placeholderTextColor={t.muted}
-            style={[styles.input, { borderColor: t.sageLine, backgroundColor: t.card, color: t.ink }]} />
+          <CityInput
+            t={t}
+            value={city}
+            onChangeText={(txt) => { setCity(txt); setPicked(null); }}
+            onPick={(c) => { setCity(c.city); setPicked(c); Haptics.selectionAsync().catch(() => {}); }}
+          />
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
